@@ -1,0 +1,2 @@
+# Keep byte hashes stable when cloning on Windows or other platforms.
+* -text

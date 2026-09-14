@@ -1,0 +1,38 @@
+{
+  "packageVersion": "0.1.0",
+  "runtimeVersion": "672c8d1599e973a0",
+  "files": [
+    {
+      "name": "adaptive-context.mjs",
+      "sha256": "c8632e47eff4e5b8573d59d7f3df6e314b005dba92d234d068ec0b940c3a15cf"
+    },
+    {
+      "name": "agent-context.mjs",
+      "sha256": "1cec3a6a45190de1269ea9c6934c21cf67bfb32e898687ea0e80c0484ac31a9f"
+    },
+    {
+      "name": "discovery-schemas.mjs",
+      "sha256": "bd8fc9b58706f0606fbe069606552e7a3c29bab6e3563fcd87e73aaf41c17e8f"
+    },
+    {
+      "name": "reasoning-guidance.mjs",
+      "sha256": "d64193b76c01e0cff0e7444c36e9c8d63818d481d4b694729527f6de16a1b304"
+    },
+    {
+      "name": "analysis-pass.mjs",
+      "sha256": "4b90a94d3c476b603c3c49a8900cc62398e95b829b12496a11c3e03c5bb2d535"
+    },
+    {
+      "name": "final-review.mjs",
+      "sha256": "4bd81b8408d2d95cf09b1492ee09add1ce413614d1cf33b1d81a587d394a0be3"
+    },
+    {
+      "name": "target-model.mjs",
+      "sha256": "99a2d53e68258f2cfd8747fa4fb59a04fe424ec4ebf7af13c9d9182a3a6d9dac"
+    },
+    {
+      "name": "audit.mjs",
+      "sha256": "54328a823befc9f5e20554caa1ed1ea7ffe579a5fa464cdb87f818c36f101ff0"
+    }
+  ]
+}

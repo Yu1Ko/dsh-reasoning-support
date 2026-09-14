@@ -1,0 +1,13 @@
+node_modules/
+runtime/test-output/
+tests/test-output/
+work/
+audit/
+.dsh/
+.reasoning-support-backups/
+.env
+.env.*
+*.jsonl
+*.zstd
+*.log
+*.tmp
