@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
 const latest = new WeakMap();
-const kinds = new Set(['reasoning-support/advice', 'reasoning-support/review']);
+const kinds = new Set(['reasoning-support/advice', 'reasoning-support/review', 'reasoning-support/control', 'reasoning-support/checkpoint']);
 
 export function auditPath(directory, sessionId) {
   const key = createHash('sha256').update(String(sessionId)).digest('hex');
@@ -22,7 +22,7 @@ export function recordAudit(agent, type, data, directory) {
     }
   } catch (error) {
     latest.delete(agent);
-    console.warn(`[reasoning-support] Audit persistence failed (${error.code ?? error.name}); preserving the primary agent response.`);
+    console.warn(`[reasoning-support] Audit persistence failed (${error.code ?? error.name}); independent acceptance is unavailable.`);
     return false;
   }
   let records = latest.get(agent);

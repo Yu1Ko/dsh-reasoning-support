@@ -21,7 +21,7 @@ test('a Web model selection wins over stale creation options', () => {
 });
 
 const user = (text = 'Find the constrained optimum.') => ({ id: 'u1', role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text }] });
-function fixture(chunks = [{ type: 'block-end', block: { type: 'text', text: 'A checked advisory result.' } }, { type: 'finish', reason: { kind: 'stop' } }]) {
+function fixture(chunks = [{ type: 'block-end', block: { type: 'text', text: 'A checked advisory result.' } }, { type: 'finish', reason: { kind: 'stop' } }], config = {}) {
   const calls = [];
   let hook;
   const ctx = {
@@ -29,10 +29,10 @@ function fixture(chunks = [{ type: 'block-end', block: { type: 'text', text: 'A 
     llm: { async *stream(options) { calls.push(options); for (const chunk of chunks) yield chunk; } },
   };
   const agent = { id: 'test-session', options: { provider: 'existing-route', model: 'codebuddy/deepseek-v4.1-flash', reasoningEffort: 'high' }, session: { deriveMessages: () => [], append() { throw new Error('Audit must not append unknown DSH session events'); } } };
-  apply(ctx);
+  apply(ctx, config);
   const message = user();
   const decision = { kind: 'enter', messages: [message] };
-  return { agent, message, decision, calls, get events() { const data = latestAudit(agent, 'reasoning-support/advice'); return data ? [{ type: 'reasoning-support/advice', data }] : []; }, invoke: (override = {}, next = async () => decision) => hook({ agent, messages: [message], signal: new AbortController().signal, turn: 1, ...override }, next) };
+  return { ctx, agent, message, decision, calls, get events() { const data = latestAudit(agent, 'reasoning-support/advice'); return data ? [{ type: 'reasoning-support/advice', data }] : []; }, invoke: (override = {}, next = async () => decision) => hook({ agent, messages: [message], signal: new AbortController().signal, turn: 1, ...override }, next) };
 }
 
 test('same route and cancellation are used; native input is retained; one extra call is recorded', async () => {
@@ -94,8 +94,8 @@ test('private reasoning and injected catalogs do not leak into analyst history',
   const input = buildInput(f.agent, [f.message]);
   assert.match(input.text, /Earlier public answer/);
   assert.doesNotMatch(input.text, /PRIVATE_REASONING|UNRELATED_CATALOG/);
-  assert.equal(buildInput(f.agent, [user('x'.repeat(48001))]), undefined);
-  assert.equal(buildInput(f.agent, [{ ...user(), content: [{ type: 'image', attachment: {} }] }]), undefined);
+  assert.equal(buildInput(f.agent, [user('x'.repeat(48001))]).omitted, true);
+  assert.equal(buildInput(f.agent, [{ ...user(), content: [{ type: 'image', attachment: {} }] }]).content.some(block => block.type === 'image'), true);
 });
 
 test('compaction checkpoints remain available and extra-call opt-outs are respected', () => {
@@ -111,11 +111,54 @@ test('compaction checkpoints remain available and extra-call opt-outs are respec
 
 test('text follow-ups to image context preserve the original multimodal agent path', () => {
   const f = fixture();
-  f.agent.session.deriveMessages = () => [{ role: 'user', content: [{ type: 'image', attachment: {} }] }];
-  assert.equal(buildInput(f.agent, [user('What is shown above?')]), undefined);
+  f.agent.session.deriveMessages = () => [{ id: 'earlier', role: 'user', source: { kind: 'user' }, content: [{ type: 'image', attachment: {} }] }];
+  assert.equal(buildInput(f.agent, [user('What is shown above?')]).content.some(block => block.type === 'image'), true);
 });
 
 test('invalid configuration is rejected', () => {
   assert.throws(() => apply({}, { surprise: true }), /Unsupported/);
   assert.throws(() => apply({}, { maxTokens: -1 }), /Invalid/);
+});
+
+test('attachment timeout is contained and never cancels the primary agent', async () => {
+  const f = fixture(undefined, { timeoutMs: 1000 });
+  f.message.content = [{ type: 'file', attachment: { attachmentId: 'slow-file', name: 'brief.txt', bytes: 3 } }];
+  f.ctx.attachments = { async *readFileStream(_ref, signal) {
+    await new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+    yield Buffer.from('abc');
+  } };
+  const controller = new AbortController();
+  // Keep the event loop alive while AbortSignal.timeout's unref'ed timer fires.
+  const keepAlive = setTimeout(() => {}, 2000);
+  try {
+    const result = await f.invoke({ signal: controller.signal });
+    assert.equal(result.kind, 'enter');
+    assert.equal(controller.signal.aborted, false);
+    assert.equal(f.calls.length, 0);
+    assert.equal(f.events[0].data.status, 'failed');
+  } finally { clearTimeout(keepAlive); }
+});
+
+test('PDF metadata does not release deferred advice; actual bounded previews do', async () => {
+  const f = fixture();
+  f.message.content = [{ type: 'file', attachment: { attachmentId: 'pdf-source', name: 'brief.pdf', bytes: 200 } }];
+  f.ctx.attachments = { async *readFileStream() { throw new Error('Binary parsing belongs to native tools'); } };
+  f.ctx.llm.prepareCall = async config => ({ config, inputModalities: ['text', 'image'], stream: f.ctx.llm.stream.bind(f.ctx.llm) });
+  const history = [f.message];
+  f.agent.session.deriveMessages = () => history;
+  await f.invoke();
+  assert.equal(f.calls.length, 0);
+  history.push({ content: [{ type: 'tool-call', id: 'meta', name: 'pwsh', arguments: '{"command":"Get-Item pdf-source/brief.pdf | Select-Object Length"}' }] },
+    { content: [{ type: 'tool-result', toolCallId: 'meta', content: [{ type: 'text', text: 'Length: 200' }] }] });
+  const next = async () => ({ kind: 'enter', messages: [] });
+  await f.invoke({ messages: [] }, next);
+  assert.equal(f.calls.length, 0);
+  history.push({ content: [{ type: 'tool-call', id: 'pages', name: 'read_image', arguments: '{"file_path":"pdf-source-page1.png"}' }] },
+    { content: [{ type: 'tool-result', toolCallId: 'pages', content: Array.from({ length: 40 }, (_, index) => ({ type: 'image', attachment: { attachmentId: `page-${index}`, mediaType: 'image/png', bytes: 20, width: 10, height: 10 } })) }] });
+  await f.invoke({ messages: [] }, next);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].messages[0].content.filter(block => block.type === 'image').length, 16);
+  assert.equal(f.events[0].data.imageCount, 16);
+  await f.invoke({ messages: [] }, next);
+  assert.equal(f.calls.length, 1);
 });

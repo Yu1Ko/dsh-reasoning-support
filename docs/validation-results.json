@@ -1,0 +1,384 @@
+{
+  "version": "0.2.0",
+  "recorded": "2026-09-15",
+  "runtimeVersion": "8b71e5845691cabf",
+  "automated": {
+    "passed": 80,
+    "failed": 0,
+    "installerCases": 11
+  },
+  "nativeDsh": {
+    "passed": true,
+    "deterministicProvider": true,
+    "actualDshLoopAndFileTools": true,
+    "cases": [
+      {
+        "case": "strict-json",
+        "passed": true,
+        "auxiliaryCalls": 2,
+        "mainCalls": 1,
+        "tools": [],
+        "sameTurn": true
+      },
+      {
+        "case": "repair",
+        "passed": true,
+        "auxiliaryCalls": 3,
+        "mainCalls": 6,
+        "tools": [
+          "write",
+          "read",
+          "write",
+          "read"
+        ],
+        "sameTurn": true
+      },
+      {
+        "case": "evidence",
+        "passed": true,
+        "auxiliaryCalls": 3,
+        "mainCalls": 4,
+        "tools": [
+          "write",
+          "read"
+        ],
+        "sameTurn": true
+      },
+      {
+        "case": "checkpoint",
+        "passed": true,
+        "auxiliaryCalls": 3,
+        "mainCalls": 5,
+        "tools": [
+          "write",
+          "read",
+          "reasoning_support_checkpoint",
+          "reasoning_support_checkpoint"
+        ],
+        "sameTurn": true
+      },
+      {
+        "case": "image",
+        "passed": true,
+        "auxiliaryCalls": 2,
+        "mainCalls": 2,
+        "tools": [
+          "read_image"
+        ],
+        "sameTurn": true
+      },
+      {
+        "case": "text-attachment",
+        "passed": true,
+        "auxiliaryCalls": 2,
+        "mainCalls": 1,
+        "tools": [],
+        "sameTurn": true
+      },
+      {
+        "case": "pdf-attachment",
+        "passed": true,
+        "auxiliaryCalls": 2,
+        "mainCalls": 3,
+        "tools": [
+          "pwsh",
+          "read"
+        ],
+        "sameTurn": true
+      },
+      {
+        "case": "opt-out",
+        "passed": true,
+        "auxiliaryCalls": 0,
+        "mainCalls": 1,
+        "tools": [],
+        "sameTurn": true
+      }
+    ],
+    "adapterObservations": [
+      {
+        "case": "strict-json",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "strict-json",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "repair",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "repair",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "repair",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "evidence",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "evidence",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "evidence",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "checkpoint",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "checkpoint",
+        "phase": "review",
+        "checkpoint": true,
+        "imageCount": 0
+      },
+      {
+        "case": "checkpoint",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "image",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 1
+      },
+      {
+        "case": "image",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 2
+      },
+      {
+        "case": "image-followup",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 1
+      },
+      {
+        "case": "image-followup",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 1
+      },
+      {
+        "case": "text-attachment",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "text-attachment",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "pdf-attachment",
+        "phase": "advice",
+        "checkpoint": false,
+        "imageCount": 0
+      },
+      {
+        "case": "pdf-attachment",
+        "phase": "review",
+        "checkpoint": false,
+        "imageCount": 0
+      }
+    ]
+  },
+  "onlineDsv41": {
+    "testedRuntimeVersion": "83f1de32c12cb47f",
+    "passed": true,
+    "inputModalities": [
+      "text",
+      "image"
+    ],
+    "cases": [
+      {
+        "case": "image",
+        "passed": true,
+        "contentPassed": true,
+        "wirePassed": true,
+        "timedOut": false,
+        "finish": "completed",
+        "elapsedMs": 6592,
+        "primaryCalls": 1,
+        "auxiliary": [
+          {
+            "type": "reasoning-support/advice",
+            "status": "accepted",
+            "calls": 1
+          },
+          {
+            "type": "reasoning-support/review",
+            "status": "accepted",
+            "calls": 1,
+            "decision": "pass"
+          }
+        ],
+        "wire": [
+          {
+            "case": "image",
+            "phase": "advice",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          },
+          {
+            "case": "image",
+            "phase": "main",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          },
+          {
+            "case": "image",
+            "phase": "review",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          }
+        ]
+      },
+      {
+        "case": "image-text-followup",
+        "passed": true,
+        "contentPassed": true,
+        "wirePassed": true,
+        "timedOut": false,
+        "finish": "completed",
+        "elapsedMs": 5512,
+        "primaryCalls": 1,
+        "auxiliary": [
+          {
+            "type": "reasoning-support/advice",
+            "status": "accepted",
+            "calls": 1
+          },
+          {
+            "type": "reasoning-support/review",
+            "status": "accepted",
+            "calls": 1,
+            "decision": "pass"
+          }
+        ],
+        "wire": [
+          {
+            "case": "image-text-followup",
+            "phase": "advice",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          },
+          {
+            "case": "image-text-followup",
+            "phase": "main",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          },
+          {
+            "case": "image-text-followup",
+            "phase": "review",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          }
+        ]
+      },
+      {
+        "case": "text-attachment",
+        "passed": true,
+        "contentPassed": true,
+        "wirePassed": true,
+        "timedOut": false,
+        "finish": "completed",
+        "elapsedMs": 8741,
+        "primaryCalls": 2,
+        "auxiliary": [
+          {
+            "type": "reasoning-support/advice",
+            "status": "accepted",
+            "calls": 1
+          },
+          {
+            "type": "reasoning-support/review",
+            "status": "accepted",
+            "calls": 1,
+            "decision": "pass"
+          }
+        ],
+        "wire": [
+          {
+            "case": "text-attachment",
+            "phase": "advice",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          },
+          {
+            "case": "text-attachment",
+            "phase": "main",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          },
+          {
+            "case": "text-attachment",
+            "phase": "main",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          },
+          {
+            "case": "text-attachment",
+            "phase": "review",
+            "model": "codebuddy/deepseek-v4.1-flash",
+            "imageParts": 1,
+            "encodedImageBytes": 562,
+            "httpStatus": 200
+          }
+        ]
+      }
+    ]
+  },
+  "additionalOnlineCoverage": {
+    "pdf": "Final rechecks timed out at the provider before the first primary response; not counted as passed.",
+    "engineering": "Not reached after the PDF provider timeout."
+  }
+}

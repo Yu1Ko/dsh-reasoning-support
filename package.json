@@ -1,14 +1,15 @@
 {
   "name": "dsh-reasoning-support",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Context shaping and same-model reasoning support for DeepSeek Harness",
+  "description": "DSV4.1 reasoning support with multimodal context and bounded artifact acceptance for DeepSeek Harness",
   "license": "MIT",
   "type": "module",
   "engines": { "node": ">=24" },
   "scripts": {
     "test": "node --test runtime/*.test.mjs tests/*.test.mjs",
     "test:runtime": "node --test runtime/*.test.mjs",
+    "test:native": "node scripts/test-native.mjs",
     "check": "node --check install.mjs && node scripts/manifest.mjs --check",
     "manifest": "node scripts/manifest.mjs"
   }

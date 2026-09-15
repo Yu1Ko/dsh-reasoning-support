@@ -6,36 +6,56 @@ An optimization plugin for **DSV4.1** in [DeepSeek Harness (DSH)](https://github
 
 ## What it is for
 
-DSV4.1 can sometimes solve a problem in minimal mode, yet miss a condition or fall back on a familiar answer when working with a full agent's tools, skills, and project context. This project targets that gap, helping the model make better use of its existing comprehension and reasoning abilities in a complete working environment.
+DSV4.1 can sometimes solve a problem in minimal mode yet miss a condition amid a full agent's tools, skills and project context. This project targets that gap: provide a lean analysis context, let the full agent execute, and check the result before delivery.
 
-Keep file access, shell commands, Skills, and project rules while giving DSV4.1 a separate analysis pass in a lean context and a review before delivery. The aim is to approach minimal-mode problem-solving performance while retaining the ability to carry out real tasks.
+Use it for everyday questions, screenshot-driven creation, and engineering tasks with documents, source files or other attachments. Images and attachments enter the auxiliary pipeline. When acceptance finds a concrete gap, the main agent can gather evidence, repair the artifact and obtain another review within the same user turn.
 
 ## How it works
 
-A lean analysis pass runs before the full agent executes the task, followed by a review before the final response. All three stages use the current DSV4.1 model route.
+A lean analysis pass runs before implementation, followed by a review before the final response. Each stage uses the selected DSV4.1 model route.
 
 ```mermaid
 flowchart LR
-    U["Original request"] --> A["Lean-context analysis"]
+    U["Original request, images and attachments"] --> P["Prepare readable material"]
+    P --> A["Lean-context analysis"]
     U --> B["Full agent execution"]
+    P --> B
     A -->|"Fallible reference"| B
     U --> C["Final review"]
     A --> C
-    B -->|"Draft and tool-result excerpts"| C
-    C --> D["Final answer"]
+    B -->|"Draft, tool results and previews"| C
+    C -->|"Pass"| D["Final answer"]
+    C -->|"Gather evidence or repair, with limits"| B
+    C -->|"Blocked or budget reached"| E["Report results and remaining gaps"]
 ```
 
-1. **Lean analysis**: use the original request and relevant conversation context to produce a candidate answer or an approach to the task.
-2. **Full execution**: the main agent considers the request and reference, then uses its full tool set to answer questions, work with files, or complete engineering tasks.
-3. **Final review**: check the task's conditions, reference, draft, and tool-result excerpts to produce the answer shown to the user.
+1. **Prepare material:** retain original images and read supported text attachments. For other formats, the main agent obtains readable content or previews with native tools.
+2. **Lean analysis:** use the original request, relevant context and available material to produce a candidate answer or a short execution brief with acceptance criteria.
+3. **Full execution:** the main agent uses native tools, Skills and project rules to create artifacts and obtain verification evidence.
+4. **Acceptance and repair:** distinguish pass, missing evidence, concrete defects and blockers. Gather missing evidence before changing an implementation; return verified defects to the main agent for repair and review again.
 
-Skill catalogs are also loaded on demand to reduce automatically expanded instructions. Native tools and project rules remain available.
+Review feedback is fallible and cannot grant permissions. Skill catalogs are discovered on demand; ordinary tool iterations do not repeat the initial analysis pass.
 
-A simple question usually takes **1 primary call + 2 auxiliary calls**. Engineering tasks may also require tool loops. The extra analysis and review increase response time and usage; results vary by task.
+## Images and attachments
+
+- **Images:** original references enter analysis and review. Tool-generated screenshots and renders can enter acceptance with separate provenance. Text follow-ups to image conversations remain supported.
+- **Text and source files:** the DSH attachment service reads and verifies the complete bytes before providing text. Direct reading supports UTF-8 files up to 2 MiB by default; long text is explicitly marked as an excerpt.
+- **PDF, Office, model files and archives:** the main agent uses available local parsers, then reads the extracted text or previews. Producing a file, checking its size or reporting a page count is not equivalent to supplying its contents.
+- **Long input:** auxiliary context is excerpted within a budget, with omissions marked. The plugin does not rewrite the main agent's original input. Each auxiliary request retains at most 16 images.
+
+A custom parser can place extracted text or previews in a temporary path containing the original attachment's SHA-256 hash, then inspect them through `read`, `read_image`, or a `Get-Content` / `cat` command that displays the contents. This associates the result with its source. Scanned PDFs need page images or OCR; specific formats need suitable local tools. Unread, unparsed and omitted material is not verified evidence.
+
+**The selected DSH provider route must also declare image input.** With `llm-pi-ai`, add this field to the existing DSV4.1 model entry, preserving its other fields:
+
+```yaml
+input: [text, image]
+```
+
+The plugin checks the capability bound to the actual adapter call. A text placeholder in place of an image is not recorded as successful visual acceptance.
 
 ## Installation and activation
 
-You need Node.js **24 or newer** and a DSH installation with a configured model provider. The tested environment is Windows, Node.js 24.18.0, and DSH 0.1.5-rc.1.
+You need Node.js **24 or newer** and DSH with a configured model provider. The tested environment is Windows, Node.js 24.18.0, and DSH 0.1.5-rc.1.
 
 **Recommended: create an independent preset based on Standard, then enable the plugins in that preset.** The installer creates the **Reasoning Support** preset for you.
 
@@ -45,65 +65,67 @@ cd dsh-reasoning-support
 node ./install.mjs
 ```
 
-Start a new session and select **Reasoning Support** with **DSV4.1**.
+You can also extract a release archive and run the installer. Start a new session and select **Reasoning Support** with **DSV4.1**.
 
-To use this preset by default for new sessions:
+To use the preset by default for new sessions:
 
 ```sh
 node ./install.mjs --set-default
 ```
 
-The usual Windows global npm location is detected automatically. For other installation locations or operating systems, supply the path to the installed DSH package's `package.json`:
+The usual Windows global npm location is detected automatically. For other locations or operating systems, specify the installed DSH package:
 
 ```sh
 node ./install.mjs --dsh-package "/absolute/path/to/@deepseek-ai/dsh/package.json"
 ```
 
-<details>
-<summary>More installation options</summary>
+Other options: `--dsh-home PATH` selects the DSH data directory; `--expect-default ID` changes the default only if its current value matches. `DSH_HOME` and `DSH_PACKAGE` environment variables can also supply paths.
 
-- `--dsh-home PATH`: DSH data directory; also configurable through `DSH_HOME`.
-- `--dsh-package PATH`: DSH package path; also configurable through `DSH_PACKAGE`.
-- `--set-default`: select Reasoning Support as the default preset for new sessions.
-- `--expect-default ID`: change the default only if its current value matches the specified preset.
+## Cost and limits
 
-</details>
+The normal flow is **N primary calls + 1 analysis + 1 initial acceptance + R follow-up reviews**, or **N + 2 + R**. `N` includes material preparation, tool iterations, evidence gathering and repairs. Internal repairs do not restart the analysis pass.
+
+Defaults allow at most **2 repair/evidence rounds followed by review**. No new repair rounds are added after five minutes from the first acceptance attempt. An individual auxiliary call times out after 150 seconds. No new auxiliary calls start once reported auxiliary usage reaches 200,000 tokens; each call allows at most 32,768 output tokens. These limits govern the plugin's additional work and do not forcibly terminate a running primary tool.
+
+Repeated feedback without new evidence or artifact changes stops repairs early. Cancellation, new user input, stale results and parsing failures have separate handling. If engineering acceptance remains incomplete, the main agent reports the actual results and unverified requirements in the requested output format.
+
+**Milestone review is off by default.** To review a rough model or a first working page, set `checkpoint: true` in the installed `final-review.mjs` entry's `config`. The main agent can call `reasoning_support_checkpoint`, spending at most one milestone review per user request. Count that separately as `K`: **N + 2 + R + K**.
+
+Add **“Do not make extra model calls”** to temporarily opt out. **“For the rest of this conversation, do not make extra model calls”** persists until an explicit **“Re-enable extra model calls”**. Child agents do not add another copy of this auxiliary pipeline. Counts refer to logical calls; provider-internal retries and billing remain governed by the provider's records.
+
+Stage states, answers, timings and auxiliary usage are recorded in `storages/reasoning-support-audit` under the DSH data directory.
 
 ## Supported models
 
-Analysis and review are enabled for **DSV4.1** with these model identifiers:
+The auxiliary pipeline targets **DSV4.1** with these identifiers:
 
 - `deepseek-v4.1`, `deepseek-v41`, and variants with a suffix beginning with `-`.
-- Corresponding identifiers with a routing prefix, such as `codebuddy/deepseek-v4.1-flash`.
-- `deepseek-flash` under the `deepseek-official` provider, displayed as `DeepSeek-V41-Flash` in the tested DSH model catalog.
+- Corresponding identifiers with a route prefix, such as `codebuddy/deepseek-v4.1-flash`.
+- `deepseek-flash` under `deepseek-official`, displayed as `DeepSeek-V41-Flash` in the tested DSH catalog.
 
-Other models skip the two auxiliary calls.
-
-## Usage notes
-
-- Add **"Do not make extra model calls"** to a request to temporarily disable analysis and review.
-- Images, attachments, visual conversation history, child agents, and oversized inputs skip auxiliary calls.
-- If an auxiliary call fails or returns unusable output, the available primary answer is preserved.
-- Stage answers, durations, and auxiliary usage are recorded under `storages/reasoning-support-audit` in the DSH data directory, so you can inspect results and call overhead.
+Other models do not trigger auxiliary calls. See the [validation notes](docs/VALIDATION.md) for tested paths and actual transport observations. Current validation establishes functionality and integration; it does not quantify equal-budget reasoning accuracy or engineering success-rate improvements.
 
 ## Rollback
 
-Installation creates a configuration backup and prints a `receiptPath`. Use that path to restore the configuration:
+Installation creates a backup and prints a `receiptPath`:
 
 ```sh
 node ./install.mjs --rollback "/path/to/installation.json"
 ```
 
-Rollback checks for configuration changes made after installation and retains existing sessions, runtime files, and call records.
+Rollback checks for subsequent configuration edits and retains existing sessions, runtime files and call records.
 
 ## Development and tests
 
 ```sh
 npm test
 npm run check
+npm run test:native -- --dsh-package "/absolute/path/to/@deepseek-ai/dsh/package.json"
 ```
 
-Tests cover runtime behavior, installation, and rollback, with additional live DSH integration checks documented in the [validation notes](docs/VALIDATION.md). After editing runtime code, run `npm run manifest` to update the content manifest.
+Regular tests need no model account. Native integration tests use the real DSH loop, file tools and attachment service with a deterministic local provider. The PDF case requires Python and `pypdf`; `DSH_TEST_PYTHON` can select Python. After changing runtime code, run `npm run manifest` to update the content manifest.
+
+See the [design notes in Chinese](docs/IMPROVEMENT_PLAN.zh-CN.md) for implementation and acceptance details.
 
 ## License
 

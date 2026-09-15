@@ -1,6 +1,6 @@
 {
-  "packageVersion": "0.1.0",
-  "runtimeVersion": "672c8d1599e973a0",
+  "packageVersion": "0.2.0",
+  "runtimeVersion": "8b71e5845691cabf",
   "files": [
     {
       "name": "adaptive-context.mjs",
@@ -20,11 +20,11 @@
     },
     {
       "name": "analysis-pass.mjs",
-      "sha256": "4b90a94d3c476b603c3c49a8900cc62398e95b829b12496a11c3e03c5bb2d535"
+      "sha256": "baa12787c544e1d97346aa4c3fa82f223ae2a2a68014d1378dc8b8929082ec88"
     },
     {
       "name": "final-review.mjs",
-      "sha256": "4bd81b8408d2d95cf09b1492ee09add1ce413614d1cf33b1d81a587d394a0be3"
+      "sha256": "d0b18d6ad0ca84cc3bb25b1b1986e83d20800634d6bc827285755afdb6665d7f"
     },
     {
       "name": "target-model.mjs",
@@ -32,7 +32,15 @@
     },
     {
       "name": "audit.mjs",
-      "sha256": "54328a823befc9f5e20554caa1ed1ea7ffe579a5fa464cdb87f818c36f101ff0"
+      "sha256": "4f9f8a82b66c69b4aae8fd017d9992e3c0247d809d1a8349aae1a07acf18c7d3"
+    },
+    {
+      "name": "request-context.mjs",
+      "sha256": "c61af35795100b41802a3fa0ba049452b26cab7b2c00ccdf23498ad9024ef826"
+    },
+    {
+      "name": "completion-controller.mjs",
+      "sha256": "e70f5891caf80c320452ea97066af91b9613f8e85b024c763966f47bd2cee59b"
     }
   ]
 }

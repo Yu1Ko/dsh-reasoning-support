@@ -114,7 +114,7 @@ const runtimeName = './runtime/' + manifest.runtimeVersion;
 const adaptedBase = base.replace(entryPattern, (_match, prefix) => prefix + runtimeName + '/adaptive-context.mjs');
 const auditDirectory = resolve(dshHome, 'storages', 'reasoning-support-audit');
 const composition = `- id: reasoning-support-final-review\n  name: ${runtimeName}/final-review.mjs\n  config:\n    llmModule: ${JSON.stringify(llmModule)}\n    auditDirectory: ${JSON.stringify(auditDirectory)}\n\n- id: reasoning-support-analysis-pass\n  name: ${runtimeName}/analysis-pass.mjs\n  config:\n    auditDirectory: ${JSON.stringify(auditDirectory)}\n\n` + adaptedBase;
-const metadata = 'name: Reasoning Support\ndescription: Native tools and project rules with context shaping, optional same-model advice and final review. No bundled roleplay identity.\norder: 2\n';
+const metadata = 'name: Reasoning Support\ndescription: DSV4.1 reasoning support with images, attachments, native tools, and bounded artifact acceptance and repair.\norder: 2\n';
 const settingsPath = resolve(dshHome, 'settings.yaml');
 checkPath(dshHome, settingsPath);
 if (!existsSync(settingsPath)) throw new Error('Initialize DSH and configure a model provider before installing this preset.');
