@@ -1,7 +1,7 @@
 - id: reasoning-support-adaptive-context
   name: ./adaptive-context.mjs
   config:
-    allTools: true
+    allTools: false
 
 # The `standard` agent preset: the full coding agent, mounted once per process.
 #
