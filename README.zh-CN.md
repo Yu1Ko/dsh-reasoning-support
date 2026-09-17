@@ -74,29 +74,17 @@ input: [text, image]
 
 需要 Node.js **24 或更新版本**，以及已经配置好模型提供方的 DSH。已验证环境为 Windows、Node.js 24.18.0、DSH 0.1.5-rc.1。
 
-**建议基于标准模式新建一个独立预设，再在新预设中启用插件。** 安装器会自动创建 **Reasoning Support** 预设。
+本插件是一个 DSH profile bundle：预设随包提供（`presets/reasoning-support/`），安装后由 DSH 自动接入，不需要手动放置预设文件。
 
 ```sh
-git clone https://github.com/Yu1Ko/dsh-reasoning-support.git
-cd dsh-reasoning-support
-node ./install.mjs
+dsh plugin --profile <profile-name> add dsh-reasoning-support
 ```
 
-也可以解压本项目的发布包后运行安装命令。安装后新建会话，选择 **Reasoning Support** 和 **DSV4.1**。
+安装后**重启 DSH** 使新 bundle 生效，然后在新会话中选择 **Reasoning Support** 和 **DSV4.1**。
 
-需要设为新会话的默认预设时：
+要把它设为新会话的默认预设，在 DSH 设置中指定 `agent-presets.default: reasoning-support`。
 
-```sh
-node ./install.mjs --set-default
-```
-
-Windows 上常见的全局 npm 安装位置可自动识别；其他位置或系统可以指定路径：
-
-```sh
-node ./install.mjs --dsh-package "/absolute/path/to/@deepseek-ai/dsh/package.json"
-```
-
-其他选项：`--dsh-home PATH` 指定 DSH 数据目录；`--expect-default ID` 仅在当前默认预设符合指定值时继续修改。也可用 `DSH_HOME`、`DSH_PACKAGE` 环境变量指定路径。
+仓库内另附 `install.mjs`：它把预设与运行时写入 `$DSH_HOME/.agent-presets/`，作用范围是机器级，而不是单个 profile。
 
 ## 调用成本与边界
 
@@ -122,15 +110,13 @@ node ./install.mjs --dsh-package "/absolute/path/to/@deepseek-ai/dsh/package.jso
 
 其他模型不触发辅助调用。已测试范围和实际传输记录见[验证记录](docs/VALIDATION.md)。当前验证覆盖功能和集成路径，尚未给出等预算条件下的正确率或工程成功率提升数值。
 
-## 回退
-
-安装器会生成配置备份并输出 `receiptPath`：
+## 卸载
 
 ```sh
-node ./install.mjs --rollback "/path/to/installation.json"
+dsh plugin --profile <profile-name> remove dsh-reasoning-support
 ```
 
-回退会检查安装后的配置是否被再次修改，并保留已有会话、运行时和调用记录。
+移除后重启 DSH。已有会话、运行时文件和调用记录不受影响。
 
 ## 开发与测试
 

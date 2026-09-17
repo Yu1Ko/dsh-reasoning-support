@@ -74,29 +74,17 @@ The plugin checks the capability bound to the actual adapter call. A text placeh
 
 You need Node.js **24 or newer** and DSH with a configured model provider. The tested environment is Windows, Node.js 24.18.0, and DSH 0.1.5-rc.1.
 
-**Recommended: create an independent preset based on Standard, then enable the plugins in that preset.** The installer creates the **Reasoning Support** preset for you.
+This plugin is a DSH profile bundle: the preset ships inside the package (`presets/reasoning-support/`), and DSH wires it up on install. No preset files need to be placed by hand.
 
 ```sh
-git clone https://github.com/Yu1Ko/dsh-reasoning-support.git
-cd dsh-reasoning-support
-node ./install.mjs
+dsh plugin --profile <profile-name> add dsh-reasoning-support
 ```
 
-You can also extract a release archive and run the installer. Start a new session and select **Reasoning Support** with **DSV4.1**.
+**Restart DSH** so the new bundle takes effect, then select **Reasoning Support** with **DSV4.1** in a new session.
 
-To use the preset by default for new sessions:
+To make it the default preset for new sessions, set `agent-presets.default: reasoning-support` in DSH's settings.
 
-```sh
-node ./install.mjs --set-default
-```
-
-The usual Windows global npm location is detected automatically. For other locations or operating systems, specify the installed DSH package:
-
-```sh
-node ./install.mjs --dsh-package "/absolute/path/to/@deepseek-ai/dsh/package.json"
-```
-
-Other options: `--dsh-home PATH` selects the DSH data directory; `--expect-default ID` changes the default only if its current value matches. `DSH_HOME` and `DSH_PACKAGE` environment variables can also supply paths.
+The repository also ships `install.mjs`, which writes the preset and its runtime into `$DSH_HOME/.agent-presets/` — machine-wide rather than per-profile.
 
 ## Cost and limits
 
@@ -122,15 +110,13 @@ The auxiliary pipeline targets **DSV4.1** with these identifiers:
 
 Other models do not trigger auxiliary calls. See the [validation notes](docs/VALIDATION.md) for tested paths and actual transport observations. Current validation establishes functionality and integration; it does not quantify equal-budget reasoning accuracy or engineering success-rate improvements.
 
-## Rollback
-
-Installation creates a backup and prints a `receiptPath`:
+## Uninstall
 
 ```sh
-node ./install.mjs --rollback "/path/to/installation.json"
+dsh plugin --profile <profile-name> remove dsh-reasoning-support
 ```
 
-Rollback checks for subsequent configuration edits and retains existing sessions, runtime files and call records.
+Restart DSH after removal. Existing sessions, runtime files and call records are unaffected.
 
 ## Development and tests
 
