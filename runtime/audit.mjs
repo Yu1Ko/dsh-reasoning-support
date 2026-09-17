@@ -5,6 +5,12 @@ import { createHash } from 'node:crypto';
 const latest = new WeakMap();
 const kinds = new Set(['reasoning-support/advice', 'reasoning-support/review', 'reasoning-support/control', 'reasoning-support/checkpoint']);
 
+/** The harness home's audit directory, when the host publishes its path helper. */
+export function defaultAuditDirectory(ctx) {
+  const dshHomePath = ctx.get?.('dshHomePath');
+  return typeof dshHomePath === 'function' ? dshHomePath('storages', 'reasoning-support-audit') : undefined;
+}
+
 export function auditPath(directory, sessionId) {
   const key = createHash('sha256').update(String(sessionId)).digest('hex');
   return resolve(directory, key + '.jsonl');

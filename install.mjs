@@ -106,15 +106,32 @@ const presetRoot = resolve(dshHome, '.agent-presets');
 const target = resolve(presetRoot, presetId);
 if (!inside(presetRoot, target)) throw new Error('Invalid preset destination');
 checkPath(dshHome, target);
-const base = readFileSync(resolve(packageRoot, 'base.agent.cordis.yml'), 'utf8');
-if (/name:\s*.*(?:analysis-pass|final-review)\.mjs/.test(base)) throw new Error('The base already contains reasoning support; refusing duplicate middleware');
-const entryPattern = /^(\s*name:\s*)['"]?\.\/(?:runtime\/[a-f0-9]+\/)?adaptive-context\.mjs['"]?[ \t]*$/gm;
-if ([...base.matchAll(entryPattern)].length !== 1) throw new Error('The base context plugin entry was not found uniquely');
+const base = readFileSync(resolve(packageRoot, 'presets', presetId, 'agent.cordis.yml'), 'utf8');
+if (/name:\s*['"]?\.\/runtime\/[a-f0-9]{16}\//m.test(base)) throw new Error('The preset already points at a versioned runtime; refusing duplicate middleware');
 const runtimeName = './runtime/' + manifest.runtimeVersion;
-const adaptedBase = base.replace(entryPattern, (_match, prefix) => prefix + runtimeName + '/adaptive-context.mjs');
+// The shipped preset addresses the runtime relative to the package root; the
+// installed copy sits inside the preset directory, so every runtime row is
+// rewritten to the versioned directory the installer materializes.
+let rewrites = 0;
+const adaptedBase = base.replace(/(^(\s*)name:\s*)['"]?\.\.\/\.\.\/runtime\/([a-z0-9-]+\.mjs)['"]?[ \t]*$/gm,
+  (_match, prefix, _indent, file) => {
+    if (!manifest.files.some(entry => entry.name === file)) throw new Error(`Unexpected runtime row: ${file}`);
+    rewrites += 1;
+    return prefix + `${runtimeName}/${file}`;
+  });
+if (!rewrites || /\.\.\/\.\.\/runtime\//.test(adaptedBase)) throw new Error('A runtime row was not rewritten');
+// An installed preset lives under the harness home, where Node's upward lookup
+// cannot reach the harness's own dependencies. The auxiliary rows therefore get
+// explicit absolute paths here; a bundle install resolves them at load time
+// instead (see runtime/host-module.mjs).
 const auditDirectory = resolve(dshHome, 'storages', 'reasoning-support-audit');
-const composition = `- id: reasoning-support-final-review\n  name: ${runtimeName}/final-review.mjs\n  config:\n    llmModule: ${JSON.stringify(llmModule)}\n    auditDirectory: ${JSON.stringify(auditDirectory)}\n\n- id: reasoning-support-analysis-pass\n  name: ${runtimeName}/analysis-pass.mjs\n  config:\n    auditDirectory: ${JSON.stringify(auditDirectory)}\n\n` + adaptedBase;
-const metadata = 'name: Reasoning Support\ndescription: DSV4.1 reasoning support with images, attachments, native tools, and bounded artifact acceptance and repair.\norder: 2\n';
+const composition = adaptedBase
+  .replace(new RegExp(`(  name: ${runtimeName}/final-review\\.mjs\\n)`),
+    `$1  config:\n    llmModule: ${JSON.stringify(llmModule)}\n    auditDirectory: ${JSON.stringify(auditDirectory)}\n`)
+  .replace(new RegExp(`(  name: ${runtimeName}/analysis-pass\\.mjs\\n)`),
+    `$1  config:\n    auditDirectory: ${JSON.stringify(auditDirectory)}\n`);
+if (!composition.includes('llmModule:') || !composition.includes('auditDirectory:')) throw new Error('The auxiliary rows were not configured');
+const metadata = readFileSync(resolve(packageRoot, 'presets', presetId, 'preset.yml'), 'utf8');
 const settingsPath = resolve(dshHome, 'settings.yaml');
 checkPath(dshHome, settingsPath);
 if (!existsSync(settingsPath)) throw new Error('Initialize DSH and configure a model provider before installing this preset.');
@@ -174,4 +191,4 @@ try {
   process.exitCode = 1;
   throw error;
 }
-console.log(JSON.stringify({ installed: true, presetId, displayName: 'Reasoning Support', target, runtimeVersion: manifest.runtimeVersion, defaultChanged: receipt.defaultChanged, otherSettingsUnchanged: receipt.otherSettingsUnchanged, auditDirectory, receiptPath }, null, 2));
+console.log(JSON.stringify({ installed: true, presetId, displayName: 'Reasoning Support', target, runtimeVersion: manifest.runtimeVersion, defaultChanged: receipt.defaultChanged, otherSettingsUnchanged: receipt.otherSettingsUnchanged, receiptPath }, null, 2));

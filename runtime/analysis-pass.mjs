@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { isAbsolute } from 'node:path';
 import { isSupportedModel, effectiveRoute } from './target-model.mjs';
 import { currentUserLast } from './agent-context.mjs';
-import { recordAudit } from './audit.mjs';
+import { recordAudit, defaultAuditDirectory } from './audit.mjs';
 import { buildInput, prepareMaterials, toolEvidence, publicBlocks, pendingHumanInput, textBlock, observedMessages } from './request-context.mjs';
 
 export { buildInput, hasAttachments } from './request-context.mjs';
@@ -46,6 +46,7 @@ export function apply(ctx, config = {}) {
   if (config.auditDirectory !== undefined && (typeof config.auditDirectory !== 'string' || !isAbsolute(config.auditDirectory))) throw new Error('auditDirectory must be an absolute path');
   const timeoutMs = config.timeoutMs ?? 150000;
   const maxTokens = config.maxTokens ?? 32768;
+  const auditDirectory = config.auditDirectory ?? defaultAuditDirectory(ctx);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 600000 || !Number.isInteger(maxTokens) || maxTokens < 1024 || maxTokens > 65536) throw new Error('Invalid analysis-pass limits');
   const states = new WeakMap();
   ctx.on('agent/pre-step', async ({ agent, messages: claimed, signal, turn }, next) => {
@@ -73,7 +74,7 @@ export function apply(ctx, config = {}) {
     } catch (error) {
       signal.throwIfAborted();
       state.done = true;
-      recordAudit(agent, 'reasoning-support/advice', { turn, requestIds: state.input.requestIds, calls: 0, status: 'failed', errorCode: error.code ?? error.name }, config.auditDirectory);
+      recordAudit(agent, 'reasoning-support/advice', { turn, requestIds: state.input.requestIds, calls: 0, status: 'failed', errorCode: error.code ?? error.name }, auditDirectory);
       return { ...decision, messages: currentUserLast(claimed, [...decision.messages, note('Optional material preparation failed or timed out. Continue the original task with native tools and permissions; do not imply that the auxiliary analysis read or verified the attachment.')]) };
     }
     const pending = material.files.filter(file => state.input.currentFileIds.has(file.attachmentId) && ['needs_tool', 'unavailable'].includes(file.status));
@@ -81,7 +82,7 @@ export function apply(ctx, config = {}) {
       if (state.noticeSent) return decision;
       state.noticeSent = true;
       recordAudit(agent, 'reasoning-support/advice', { turn, requestIds: state.input.requestIds, calls: 0, status: 'awaiting-materials',
-        files: pending.map(({ id, status, reason }) => ({ id, status, reason })) }, config.auditDirectory);
+        files: pending.map(({ id, status, reason }) => ({ id, status, reason })) }, auditDirectory);
       const preparation = note(`Before implementing, read or parse the attached materials with suitable native tools and inspect any needed previews. These attachments have not yet supplied usable content: ${JSON.stringify(pending)}. The independent brief is deferred until content-reading evidence exists; file metadata alone is insufficient. For a custom parser, write extracted text or previews to a temporary path containing the attachment's hash (the hex part after sha256:, without the colon), then inspect them with read/read_image. Do not infer contents from filenames. Respect the original tool restrictions and permissions; if reading is impossible, report the specific missing information.`);
       return { ...decision, messages: currentUserLast(claimed, [...decision.messages, preparation]) };
     }
@@ -111,7 +112,7 @@ export function apply(ctx, config = {}) {
       if (signal.aborted) throw error;
     } finally {
       audit.elapsedMs = Date.now() - started;
-      audited = Boolean(recordAudit(agent, 'reasoning-support/advice', audit, config.auditDirectory));
+      audited = Boolean(recordAudit(agent, 'reasoning-support/advice', audit, auditDirectory));
     }
     signal.throwIfAborted();
     if (!audited || audit.status === 'obsolete') return decision;

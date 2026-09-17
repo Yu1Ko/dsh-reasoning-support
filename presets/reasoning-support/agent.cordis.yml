@@ -1,5 +1,11 @@
+- id: reasoning-support-final-review
+  name: ../../runtime/final-review.mjs
+
+- id: reasoning-support-analysis-pass
+  name: ../../runtime/analysis-pass.mjs
+
 - id: reasoning-support-adaptive-context
-  name: ./adaptive-context.mjs
+  name: ../../runtime/adaptive-context.mjs
   config:
     allTools: false
 

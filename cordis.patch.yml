@@ -1,0 +1,28 @@
+# This package is a profile bundle: `dsh plugin --profile <name> add
+# dsh-reasoning-support` records the dependency, and `dsh` reconciles it into
+# `dsh.profile.bundles` because this manifest declares `dsh.bundle.patch`
+# (see the plugin-command doc in @deepseek-ai/dsh). The patch below then runs as
+# one layer of the composed loader tree.
+#
+# The preset lives inside this package (`presets/reasoning-support`), so the
+# roster has to be told where to look. `baseUrl` is the profile directory the
+# loader boots from, which is also the anchor `dsh plugin` installs into.
+#
+# Patch config replaces the target entry's whole `config` object rather than
+# merging into it (@deepseek-ai/cordis-plugin-include `applyEntryPatches`), so
+# `default` is repeated here to keep the shipped value instead of silently
+# dropping it.
+#
+# `!!js` evaluates one JavaScript expression through `with (ctx) { eval(expr) }`,
+# where `baseUrl` is the profile directory (`@deepseek-ai/dsh-app-boot` sets it
+# from the composed config path). The expression is single-quoted because an
+# unquoted scalar starting with `{` parses as a YAML flow mapping instead of an
+# expression. On Windows `URL.pathname` carries a leading slash that a filesystem
+# path must not keep.
+- id: agent-presets
+  name: '@deepseek-ai/dsh-agent-presets'
+  config:
+    default: standard
+    roots:
+      - trust: system
+        path: !!js '(p => process.platform === "win32" ? p.slice(1) : p)(decodeURIComponent(new URL("./node_modules/dsh-reasoning-support/presets/", baseUrl).pathname))'

@@ -62,7 +62,7 @@ test('existing install and exact rollback', () => {
   const info = installed(f);
   const composition = readFileSync(resolve(f.target, 'agent.cordis.yml'), 'utf8');
   assert.match(composition, /prefix: You are a helpful software engineer assistant\./);
-  assert.match(composition, /allTools: true/);
+  assert.match(composition, /allTools: false/);
   assert.match(composition, /reasoning-support-final-review/);
   assert.match(composition, /reasoning-support-analysis-pass/);
   assert.equal(readFileSync(resolve(f.home, 'settings.yaml'), 'utf8'), settings.replace('default: standard', `default: ${presetId}`));
