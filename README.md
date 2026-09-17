@@ -12,6 +12,10 @@ Use it for everyday questions, screenshot-driven creation, and engineering tasks
 
 ## How it works
 
+The plugin has two independent mechanisms: the **analysis pipeline** (extra model calls that only shape text) and the **adaptive tool context** (which decides the tools the main agent can see). Either can be turned off on its own.
+
+### Analysis pipeline
+
 A lean analysis pass runs before implementation, followed by a review before the final response. Each stage uses the selected DSV4.1 model route.
 
 ```mermaid
@@ -34,7 +38,20 @@ flowchart LR
 3. **Full execution:** the main agent uses native tools, Skills and project rules to create artifacts and obtain verification evidence.
 4. **Acceptance and repair:** distinguish pass, missing evidence, concrete defects and blockers. Gather missing evidence before changing an implementation; return verified defects to the main agent for repair and review again.
 
-Review feedback is fallible and cannot grant permissions. Skill catalogs are discovered on demand; ordinary tool iterations do not repeat the initial analysis pass.
+Review feedback is fallible and cannot grant permissions. Ordinary tool iterations do not repeat the initial analysis pass, and this pipeline does not change the main agent's tool list.
+
+### Adaptive tool context
+
+`adaptive-context.mjs` rewrites the tool list for the current request when the system prompt is assembled (`system-prompt/assemble`). It is **on by default** (the `reasoning-support-adaptive-context` preset entry sets `allTools: false`):
+
+- **Native tools only at first:** the built-ins in `NATIVE_TOOLS`, plus the `tool_search` and `skill_search` tools the plugin registers. Third-party plugins, MCP and domain tools stay out of the list.
+- **Discovery on demand:** `tool_search` matches names and descriptions across the full tool catalog (at most 5 results per call). Matching non-native tools join that agent's selection set and become directly callable through their native schemas in the next step.
+- **Selection bound:** the most recent 12 entries are kept (`maxAdditionalTools`, configurable 5–100).
+- **Restored across compaction:** after context compaction the selection set is rebuilt from this session's successful `tool_search` results.
+- **Scoped per session and agent:** selection sets never leak between agents.
+- **Skills are discovered, not injected:** `skill_search` returns names and descriptions only; a body still loads through the native `skill` tool. While discovery is active, the automatically injected skill catalog is compacted to one short line.
+
+To keep the full tool list at all times, set `allTools: true` on that preset entry, which turns the filtering off; the plugin's reasoning guidance still applies.
 
 ## Images and attachments
 
