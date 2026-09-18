@@ -77,7 +77,7 @@ You need Node.js **24 or newer** and DSH with a configured model provider. The t
 This plugin is a DSH profile bundle: the preset ships inside the package (`presets/reasoning-support/`), and DSH wires it up on install. No preset files need to be placed by hand.
 
 ```sh
-dsh plugin --profile <profile-name> add dsh-reasoning-support
+dsh plugin --profile web add dsh-reasoning-support
 ```
 
 **Restart DSH** so the new bundle takes effect, then select **Reasoning Support** with **DSV4.1** in a new session.
@@ -113,7 +113,7 @@ Other models do not trigger auxiliary calls. See the [validation notes](docs/VAL
 ## Uninstall
 
 ```sh
-dsh plugin --profile <profile-name> remove dsh-reasoning-support
+dsh plugin --profile web remove dsh-reasoning-support
 ```
 
 Restart DSH after removal. Existing sessions, runtime files and call records are unaffected.
