@@ -96,7 +96,20 @@ jobs:
           npm pack "dsh-reasoning-support@${{ steps.gate.outputs.version }}" --pack-destination dist
       - name: The release asset must be the published artifact
         run: |
-          expected=$(npm view "dsh-reasoning-support@${{ steps.gate.outputs.version }}" dist.shasum)
+          version="${{ steps.gate.outputs.version }}"
+          # The registry can take a moment to expose a just-published version,
+          # so poll before reading dist.shasum.
+          expected=""
+          for attempt in $(seq 1 24); do
+            expected=$(npm view "dsh-reasoning-support@${version}" dist.shasum 2>/dev/null || true)
+            [ -n "$expected" ] && break
+            echo "waiting for dsh-reasoning-support@${version} to appear (attempt ${attempt})"
+            sleep 10
+          done
+          if [ -z "$expected" ]; then
+            echo "dsh-reasoning-support@${version} never appeared on the registry" >&2
+            exit 1
+          fi
           actual=$(sha1sum dist/dsh-reasoning-support-*.tgz | cut -d' ' -f1)
           printf 'registry sha1: %s\nasset    sha1: %s\n' "$expected" "$actual"
           test "$expected" = "$actual"
