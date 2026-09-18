@@ -1,0 +1,116 @@
+# Publish to npm and attach the tarball to a GitHub Release, once per version.
+#
+# Authentication uses npm trusted publishing (OIDC), so no NPM_TOKEN secret is
+# stored anywhere. The npm side must name this exact filename:
+#   npmjs.com -> package -> Settings -> Trusted Publisher -> GitHub Actions
+#     Organization or user : Yu1Ko
+#     Repository           : dsh-reasoning-support
+#     Workflow filename    : release.yml
+#     Allowed actions      : also allow `npm publish` (not only `npm stage publish`)
+#     Environment name     : leave empty (this workflow declares no environment)
+#
+# `repository.url` in package.json must match the GitHub repository exactly;
+# npm verifies it when exchanging the OIDC token.
+#
+# Push to main. A version npm does not have yet is published and released as
+# `v<version>`; a version npm already has only gets its Release created if that
+# Release is missing. Pushing the same version twice therefore does nothing.
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      # No dependencies are declared, so there is nothing to install and no
+      # lockfile for `npm ci`.
+      - run: npm run check
+      - run: npm test
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release and its tag
+      id-token: write # required for the OIDC token exchange
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Read the version and check the registry
+        id: gate
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if npm view "dsh-reasoning-support@${version}" version >/dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "dsh-reasoning-support@${version} is already on the registry; publishing is skipped."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: package.json and manifest.json must agree on the version
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          node -e "
+            const version = require('./package.json').version;
+            const manifest = require('./manifest.json').packageVersion;
+            if (version !== manifest) {
+              console.error('manifest.json packageVersion is', manifest, 'but package.json is', version,
+                '- run npm run manifest and commit the result');
+              process.exit(1);
+            }
+          "
+      # Pack once and publish those exact bytes, so the release asset and the
+      # registry artifact cannot drift apart. `--pack-destination` does not
+      # create the directory itself, hence the mkdir.
+      - name: Pack the tarball to publish
+        if: steps.gate.outputs.publish == 'true'
+        run: |
+          mkdir -p dist
+          npm pack --pack-destination dist
+      # Provenance is generated automatically for trusted publishing from a
+      # public repository; no --provenance flag is needed.
+      - name: Publish to npm
+        if: steps.gate.outputs.publish == 'true'
+        run: npm publish ./dist/dsh-reasoning-support-*.tgz
+      # Already published (a re-run, or the version was released by hand): take
+      # the registry's own tarball so the asset is still the published bytes.
+      - name: Fetch the published tarball
+        if: steps.gate.outputs.publish == 'false'
+        run: |
+          mkdir -p dist
+          npm pack "dsh-reasoning-support@${{ steps.gate.outputs.version }}" --pack-destination dist
+      - name: The release asset must be the published artifact
+        run: |
+          expected=$(npm view "dsh-reasoning-support@${{ steps.gate.outputs.version }}" dist.shasum)
+          actual=$(sha1sum dist/dsh-reasoning-support-*.tgz | cut -d' ' -f1)
+          printf 'registry sha1: %s\nasset    sha1: %s\n' "$expected" "$actual"
+          test "$expected" = "$actual"
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${{ steps.gate.outputs.version }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release ${tag} already exists; nothing to do."
+          else
+            gh release create "$tag" \
+              --target "${{ github.sha }}" \
+              --title "$tag" \
+              --generate-notes \
+              dist/dsh-reasoning-support-*.tgz
+          fi

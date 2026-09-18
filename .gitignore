@@ -1,4 +1,5 @@
 node_modules/
+dist/
 runtime/test-output/
 tests/test-output/
 work/
