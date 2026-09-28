@@ -18,3 +18,15 @@ export function hostLlmModuleUrl() {
     return undefined;
   }
 }
+
+/** Use the active Loader so Desktop's ASAR host wins over an older CLI install. */
+export async function hostLlmModule(ctx, explicitUrl) {
+  if (explicitUrl !== undefined) {
+    if (typeof explicitUrl !== 'string' || !explicitUrl.startsWith('file:///')) throw new Error('final-review requires the installed DSH LLM module URL');
+    return import(explicitUrl);
+  }
+  if (ctx.loader?.import) return ctx.loader.import('@deepseek-ai/dsh-llm', ctx.baseUrl, {});
+  const url = hostLlmModuleUrl();
+  if (!url) throw new Error('final-review cannot resolve the installed DSH LLM module');
+  return import(url);
+}

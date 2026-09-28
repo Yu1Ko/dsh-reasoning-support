@@ -9,6 +9,31 @@ const agent = (history = []) => ({ session: { deriveMessages: () => history } })
 const text = value => ({ type: 'text', text: value });
 const visibleText = blocks => blocks.filter(b => b.type === 'text').map(b => b.text).join('\n');
 
+test('V4 durable user and tool messages retain failure evidence after compaction', () => {
+  const request = user([text('Read requirements')]);
+  const result = { id: 'r1', role: 'tool', source: { kind: 'tool', callId: 'c1' }, toolCallId: 'c1', isError: true, content: [text('Permission denied')] };
+  const ctx = { session: { deriveMessages: () => [], snapshotEvents: () => [
+    { type: 'user/message', data: request },
+    { type: 'tool/call', data: { callId: 'c1', name: 'read', arguments: '{"file_path":"requirements.txt"}' } },
+    { type: 'tool/result', data: { message: result } },
+  ] } };
+  const evidence = toolEvidence(observedMessages(ctx, ['u1']), { requestIds: ['u1'] });
+  assert.equal(evidence.records.length, 1);
+  assert.equal(evidence.records[0].tool, 'read');
+  assert.equal(evidence.records[0].error, true);
+  assert.match(evidence.records[0].excerpt, /Permission denied/);
+});
+
+test('V4 opt-out survives history compaction and native checkpoint text remains available', () => {
+  const old = { ...user([text('For the rest of this conversation, no extra model calls.')]), id: 'old' };
+  const current = user([text('Continue')]);
+  const checkpoint = { role: 'user', source: { kind: 'compact-checkpoint' }, content: [text('Keep reference A19')] };
+  const ctx = { session: { deriveMessages: () => [checkpoint], snapshotEvents: () => [{ type: 'user/message', data: old }] } };
+  assert.equal(buildInput(ctx, [current]), undefined);
+  const resumed = { ...current, content: [text('Re-enable extra model calls.')] };
+  assert.match(buildInput(ctx, [resumed]).text, /Keep reference A19/);
+});
+
 test('current and historical images keep their order and original references', () => {
   const before = image('old'), current = image('new');
   const message = user([text('Compare this:'), current, text('to the earlier picture.')]);

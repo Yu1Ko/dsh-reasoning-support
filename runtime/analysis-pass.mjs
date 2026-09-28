@@ -38,7 +38,7 @@ export async function getAdvice(llm, options, { onDispatch, maxAnswerChars = 320
 }
 
 function note(text) {
-  return { id: randomUUID(), role: 'user', source: { kind: 'plugin', plugin: name }, content: [textBlock(text)] };
+  return { id: randomUUID(), role: 'user', source: { kind: `plugin:${name}` }, content: [textBlock(text)] };
 }
 
 export function apply(ctx, config = {}) {

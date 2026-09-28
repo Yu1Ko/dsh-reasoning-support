@@ -55,7 +55,7 @@ export function buildInput(agent, claimed, limit = 48000) {
   const latestText = latest.filter(block => block.type === 'text').map(block => block.text).join('\n');
   const ids = new Set(humans.map(message => message.id));
   const historyMessages = agent.session.deriveMessages().filter(message => !ids.has(message.id));
-  const journalUsers = (agent.session.snapshotEvents?.() ?? []).filter(event => event.type === 'user/message' && event.data?.message?.source?.kind === 'user').map(event => event.data.message);
+  const journalUsers = (agent.session.snapshotEvents?.() ?? []).filter(event => event.type === 'user/message').map(event => event.data?.message ?? event.data).filter(message => message?.source?.kind === 'user');
   let persistentOptOut = false;
   for (const message of [...(journalUsers.length ? journalUsers.filter(message => !ids.has(message.id)) : historyMessages), ...humans]) {
     if (message.source?.kind !== 'user') continue;
@@ -65,7 +65,7 @@ export function buildInput(agent, claimed, limit = 48000) {
   }
   if (!latest.length || persistentOptOut || EXTRA_CALL_OPT_OUT.test(latestText)) return undefined;
   const prior = historyMessages.filter(message => (
-    message.source?.kind === 'user' || message.role === 'assistant' ||
+    message.source?.kind === 'user' || message.role === 'assistant' || ['compact-checkpoint', 'compact-basic'].includes(message.source?.kind) ||
     (message.source?.kind === 'plugin' && ['compact', 'dsh-compaction-basic'].includes(message.source.plugin))));
   const selected = prior.slice(-8);
   const history = selected.flatMap(message => [textBlock(`[prior_conversation ${message.role}; id=${message.id ?? 'checkpoint'}]`), ...publicBlocks(message.content)]);
@@ -89,11 +89,12 @@ function taskMessages(messages, requestIds) {
 /** Read native durable tool facts even when compaction/pruning shortened the model context. */
 export function observedMessages(agent, requestIds) {
   const events = agent.session.snapshotEvents?.();
-  const start = events?.findIndex(event => event.type === 'user/message' && requestIds?.includes(String(event.data?.message?.id)));
+  const start = events?.findIndex(event => event.type === 'user/message' && requestIds?.includes(String((event.data?.message ?? event.data)?.id)));
   if (start === undefined || start < 0) return agent.session.deriveMessages();
   const messages = [];
   for (const event of events.slice(start)) {
-    if (event.type === 'user/message' && requestIds.includes(String(event.data?.message?.id))) messages.push(event.data.message);
+    const userMessage = event.data?.message ?? event.data;
+    if (event.type === 'user/message' && requestIds.includes(String(userMessage?.id))) messages.push(userMessage);
     if (event.type === 'tool/call') {
       const { callId, name, arguments: args } = event.data;
       messages.push({ role: 'assistant', content: [{ type: 'tool-call', id: callId, name, arguments: args }] });
@@ -106,7 +107,11 @@ export function observedMessages(agent, requestIds) {
 /** IDs refer to actual tool results; full-output hashes detect changes behind excerpts. */
 export function toolEvidence(messages, { requestIds, limit = 36000, maxResults = 24 } = {}) {
   const scoped = taskMessages(messages, requestIds), calls = new Map(), all = [];
-  for (const message of scoped) for (const block of message.content ?? []) {
+  for (const message of scoped) {
+    const blocksToRead = message.role === 'tool'
+      ? [{ type: 'tool-result', toolCallId: message.toolCallId, isError: message.isError, content: message.content }]
+      : message.content ?? [];
+    for (const block of blocksToRead) {
     if (block.type === 'tool-call') calls.set(block.id, block);
     if (block.type !== 'tool-result') continue;
     const call = calls.get(block.toolCallId);
@@ -120,6 +125,7 @@ export function toolEvidence(messages, { requestIds, limit = 36000, maxResults =
       ...(exitCode === undefined ? {} : { exitCode: Number(exitCode) }),
       input: clipText(input, 1600), rawInput: input, inputHash: digest(input), outputHash: digest(text),
       excerpt: clipText(text, 4000), media });
+    }
   }
   // Retain recent failures alongside recent successes, rather than dropping them at the tail.
   const important = new Set([...all.filter(record => record.error).slice(-8), ...all.slice(-maxResults)]);

@@ -50,7 +50,7 @@ test('one stop decision steers once in the same turn, with plugin provenance', a
   await consumeCompletion(state, 1, new AbortController().signal, limits);
   await consumeCompletion(state, 1, new AbortController().signal, limits);
   assert.equal(queued.length, 1);
-  assert.equal(queued[0].source.kind, 'plugin');
+  assert.equal(queued[0].source.kind, 'plugin:reasoning-support-completion');
   assert.equal(state.repairRounds, 1);
   assert.match(queued[0].content[0].text, /not user authorization/);
 });

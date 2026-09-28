@@ -3,7 +3,7 @@ import { isAbsolute } from 'node:path';
 import { getAdvice } from './analysis-pass.mjs';
 import { isSupportedModel, effectiveRoute } from './target-model.mjs';
 import { latestAudit, recordAudit, defaultAuditDirectory } from './audit.mjs';
-import { hostLlmModuleUrl } from './host-module.mjs';
+import { hostLlmModule } from './host-module.mjs';
 import { buildInput, prepareMaterials, toolEvidence, textBlock, digest, clipText, pendingHumanInput, observedMessages } from './request-context.mjs';
 import { newReviewState, invalidate, parseReview, continuationPolicy, captureProof, staleDecision, queueCompletion, consumeCompletion } from './completion-controller.mjs';
 
@@ -185,14 +185,12 @@ export async function apply(ctx, config = {}) {
   const keys = ['llmModule', 'timeoutMs', 'maxTokens', 'auditDirectory', 'maxRepairRounds', 'maxRepairTimeMs', 'maxExtraTokens', 'checkpoint'];
   if (!config || typeof config !== 'object' || Array.isArray(config) || Object.keys(config).some(key => !keys.includes(key))) throw new Error('Unsupported final-review configuration');
   if (config.auditDirectory !== undefined && (typeof config.auditDirectory !== 'string' || !isAbsolute(config.auditDirectory))) throw new Error('auditDirectory must be an absolute path');
-  const llmModule = config.llmModule ?? hostLlmModuleUrl();
-  if (typeof llmModule !== 'string' || !llmModule.startsWith('file:///')) throw new Error('final-review requires the installed DSH LLM module URL');
   const limits = { ...DEFAULT_LIMITS, ...config, auditDirectory: config.auditDirectory ?? defaultAuditDirectory(ctx) };
   for (const [key, min, max] of [['timeoutMs', 1000, 600000], ['maxTokens', 1024, 65536], ['maxRepairRounds', 0, 4], ['maxRepairTimeMs', 1000, 1800000], ['maxExtraTokens', 1024, 1000000]]) {
     if (!Number.isInteger(limits[key]) || limits[key] < min || limits[key] > max) throw new Error(`Invalid final-review limit: ${key}`);
   }
   if (typeof limits.checkpoint !== 'boolean') throw new Error('checkpoint must be boolean');
-  const { isAgentLoopRequest } = await import(llmModule);
+  const { isAgentLoopRequest } = await hostLlmModule(ctx, config.llmModule);
   if (typeof isAgentLoopRequest !== 'function') throw new Error('Installed DSH lacks the loop request identity API');
   const states = new Map();
   ctx.on('agent/pre-step', async ({ agent, messages, signal, turn }, next) => {

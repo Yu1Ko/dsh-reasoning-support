@@ -125,6 +125,7 @@ export async function apply(ctx, config) {
           await agent.whenIdle();
         } finally { clearTimeout(timer); }
         let events = agent.session.snapshotEvents();
+        writeFileSync(join(cwd, 'tool-evidence.json'), JSON.stringify(events.filter(event => ['tool/call', 'tool/result'].includes(event.type)), null, 2));
         const endReason = events.filter(e => e.type === 'turn/end').at(-1)?.data.reason;
         assert.equal(endReason?.kind, 'completed', JSON.stringify(endReason));
         const audit = readAuditRecords(join(config.home, 'storages/reasoning-support-audit'), sessionId);

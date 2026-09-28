@@ -1,5 +1,15 @@
 # Validation / 验证记录
 
+## 0.3.0 compatibility validation — 2026-09-28
+
+Windows, Node.js 24.18.0, actual DSH 0.1.7-rc.2 packages extracted from the installed Desktop ASAR:
+
+- 84 automated tests passed; installer syntax and runtime manifest checks passed.
+- All eight deterministic native scenarios, plus image-history follow-up, passed: JSON correction, actual file repair, evidence gathering, checkpoint deduplication, image and preview, text attachment, PDF parsing, and explicit opt-out.
+- Adapted preset registration, active-Loader module identity, producer-owned V4 message sources, V4 tool-role evidence, durable user-message lookup, and compaction source names.
+- Tests use a separate DSH home and a deterministic local adapter; no paid model calls. The fixture profile runs known test commands unconfined because the Windows ACL runner could not grant write access on the test volume. This does not validate Windows sandbox enforcement or change the user's profile permissions.
+- These tests establish integration behavior, not online provider reliability or model-quality improvement. Earlier 0.2.0 results below are historical.
+
 Version: **0.2.0**. Recorded on **2026-09-15**. Environment: Windows, Node.js **24.18.0**, DSH **0.1.5-rc.1**. The runtime file hashes are recorded in `manifest.json`.
 
 ## Automated checks

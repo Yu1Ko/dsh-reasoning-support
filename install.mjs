@@ -95,6 +95,9 @@ const packageOption = option('--dsh-package') ?? process.env.DSH_PACKAGE ?? defa
 if (!packageOption || !existsSync(resolve(packageOption))) throw new Error('Pass --dsh-package with the package.json path of your installed @deepseek-ai/dsh package.');
 const dshPackage = resolve(packageOption);
 const requireDsh = createRequire(dshPackage);
+if (JSON.parse(readFileSync(dshPackage, 'utf8')).dependencies?.['@deepseek-ai/dsh-agent-preset']) {
+  throw new Error('DSH 0.1.7 uses declarative presets. Install this package as a profile bundle with dsh plugin --profile <name> add <package-path>; the legacy directory installer cannot register it.');
+}
 const llmModule = pathToFileURL(requireDsh.resolve('@deepseek-ai/dsh-llm')).href;
 if (typeof (await import(llmModule)).isAgentLoopRequest !== 'function') throw new Error('The installed DSH is missing the required request identity API');
 const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'manifest.json'), 'utf8'));

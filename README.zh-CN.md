@@ -72,7 +72,7 @@ input: [text, image]
 
 ## 安装与启用
 
-需要 Node.js **24 或更新版本**，以及已经配置好模型提供方的 DSH。已验证环境为 Windows、Node.js 24.18.0、DSH 0.1.5-rc.1。
+需要 Node.js **24 或更新版本**，以及已配置模型提供方的 DSH **0.1.7-rc.2**。插件 **0.3.0** 使用新版声明式预设与 V4 会话消息。旧版 DSH 0.1.5 请使用插件 0.2.2。
 
 本插件是一个 DSH profile bundle：预设随包提供（`presets/reasoning-support/`），安装后由 DSH 自动接入，不需要手动放置预设文件。
 
@@ -82,9 +82,9 @@ dsh plugin --profile <profile-name> add dsh-reasoning-support
 
 安装后**重启 DSH** 使新 bundle 生效，然后在新会话中选择 **Reasoning Support** 和 **DSV4.1**。
 
-要把它设为新会话的默认预设，在 DSH 设置中指定 `agent-presets.default: reasoning-support`。
+要把它设为新会话的默认预设，在 `agent-preset-registry` 设置条目中指定 `selectedDefault: reasoning-support`。已有会话保留原先选择。
 
-仓库内另附 `install.mjs`：它把预设与运行时写入 `$DSH_HOME/.agent-presets/`，作用范围是机器级，而不是单个 profile。
+仓库保留的 `install.mjs` 仅用于旧版目录安装；它会明确拒绝 DSH 0.1.7，避免“复制成功但没有注册”。新版请安装 profile bundle，由 `preset-reasoning-support` 声明加载 `presets/reasoning-support/desktop.cordis.yml`。桌面版使用 **desktop** profile。仅安装依赖不代表启用，包名还需要进入 `dsh.profile.bundles`。
 
 ## 调用成本与边界
 

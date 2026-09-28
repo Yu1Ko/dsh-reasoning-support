@@ -9,6 +9,8 @@ const index = process.argv.indexOf('--dsh-package');
 const packagePath = resolve(index >= 0 ? process.argv[index + 1] : process.env.DSH_PACKAGE ?? join(process.env.APPDATA ?? '', 'npm/node_modules/@deepseek-ai/dsh/package.json'));
 if (!existsSync(packagePath)) throw new Error('Pass --dsh-package pointing to an installed DSH package.json.');
 const requireDsh = createRequire(packagePath);
+const modern = Boolean(JSON.parse(readFileSync(packagePath, 'utf8')).dependencies?.['@deepseek-ai/dsh-agent-preset']);
+const hostModules = dirname(dirname(requireDsh.resolve('@deepseek-ai/dsh-llm/package.json')));
 const output = resolve(root, 'tests/test-output');
 mkdirSync(output, { recursive: true });
 const home = mkdtempSync(join(output, 'native-'));
@@ -18,22 +20,44 @@ writeFileSync(join(home, 'settings.yaml'), 'agent-presets:\n  default: reasoning
 writeFileSync(join(home, '.credentials.yaml'), '{}\n');
 writeFileSync(join(profile, 'cordis.yml'), '[]\n');
 writeFileSync(join(profile, 'package.json'), JSON.stringify({ name: 'reasoning-support-native-validation', private: true, dependencies: {}, dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } } }, null, 2));
-symlinkSync(join(dirname(packagePath), 'node_modules'), join(profile, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+mkdirSync(join(profile, 'node_modules'), { recursive: true });
+symlinkSync(hostModules, join(profile, 'node_modules/@deepseek-ai'), process.platform === 'win32' ? 'junction' : 'dir');
+symlinkSync(root, join(profile, 'node_modules/dsh-reasoning-support'), process.platform === 'win32' ? 'junction' : 'dir');
+if (!modern) {
 const installed = spawnSync(process.execPath, [join(root, 'install.mjs'), '--dsh-home', home, '--dsh-package', packagePath], { encoding: 'utf8', windowsHide: true, timeout: 30000 });
 if (installed.status !== 0) throw new Error(installed.stderr || 'Test preset installation failed');
 const composition = join(home, '.agent-presets/reasoning-support/agent.cordis.yml');
 writeFileSync(composition, readFileSync(composition, 'utf8').replace('    llmModule:', '    checkpoint: true\n    llmModule:'));
+}
 const disabled = ['llm-deepseek', 'llm-pi-ai', 'session-title-llm', 'tool-bash', 'tool-pwsh', 'tool-jobs', 'tool-fs', 'tool-fs-search',
   'skill-filesystem', 'tool-skill', 'command-goal', 'tool-goal', 'plan-mode', 'compaction-basic', 'command-compact', 'tool-result-pruner',
   'tool-subagent-control', 'tool-subagent-list-agents', 'tool-subagent', 'tool-subagent-fork', 'workflow-worker-thread', 'tool-workflow', 'tool-ralph',
-  'agent-instructions', 'tool-todo', 'tool-web'];
+  'agent-instructions', 'tool-todo', 'tool-web', 'workflow-ptc'];
+let presetEntries;
+if (modern) {
+  const yaml = requireDsh('js-yaml');
+  const { entryListSchema } = await import(pathToFileURL(requireDsh.resolve('@deepseek-ai/cordis-plugin-include')).href);
+  const plugins = yaml.load(readFileSync(join(root, 'presets/reasoning-support/desktop.cordis.yml'), 'utf8'), { schema: entryListSchema });
+  for (const row of plugins) {
+    if (row.name.startsWith('../../runtime/')) row.name = pathToFileURL(join(root, 'runtime', row.name.split('/').at(-1))).href;
+    if (row.id === 'reasoning-support-final-review') row.config = { checkpoint: true, auditDirectory: join(home, 'storages/reasoning-support-audit') };
+    if (row.id === 'reasoning-support-analysis-pass') row.config = { auditDirectory: join(home, 'storages/reasoning-support-audit') };
+  }
+  presetEntries = [
+    { id: 'agent-preset-registry', name: '@deepseek-ai/dsh-agent-preset-registry', config: { default: 'reasoning-support' } },
+    { id: 'preset-reasoning-support', name: '@deepseek-ai/dsh-agent-preset', config: { id: 'reasoning-support', plugins } },
+  ];
+} else presetEntries = [{ id: 'agent-presets', name: '@deepseek-ai/dsh-agent-presets', config: { default: 'reasoning-support', roots: [{ path: join(home, '.agent-presets'), trust: 'user' }] } }];
 const patch = [
+  // Deterministic fixtures only: avoid requiring Windows ACL grants for PDF parsing.
+  { id: 'sandbox-policy', config: { mode: 'danger-full-access', workspaceRoot: home } },
+  { id: 'approval', config: { policy: 'never' } },
   { id: 'settings', config: { path: join(home, 'settings.yaml') } },
   { id: 'credentials', config: { path: join(home, '.credentials.yaml') } },
   ...disabled.map(id => ({ id, disabled: true })),
   { insert: [
     { id: 'subagent-model-selection-settings', name: '@deepseek-ai/dsh-tool-subagent/model-selection-settings' },
-    { id: 'agent-presets', name: '@deepseek-ai/dsh-agent-presets', config: { default: 'reasoning-support', roots: [{ path: join(home, '.agent-presets'), trust: 'user' }] } },
+    ...presetEntries,
     { id: 'reasoning-support-native-validation', name: join(root, 'tests/native-loop.mjs'), config: { home, llmModule: pathToFileURL(requireDsh.resolve('@deepseek-ai/dsh-llm')).href } },
   ] },
 ];

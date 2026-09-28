@@ -72,7 +72,7 @@ The plugin checks the capability bound to the actual adapter call. A text placeh
 
 ## Installation and activation
 
-You need Node.js **24 or newer** and DSH with a configured model provider. The tested environment is Windows, Node.js 24.18.0, and DSH 0.1.5-rc.1.
+You need Node.js **24 or newer** and DSH **0.1.7-rc.2** with a configured model provider. Version **0.3.0** uses the new declarative preset API and V4 session messages. Use plugin version 0.2.2 for the older 0.1.5 harness.
 
 This plugin is a DSH profile bundle: the preset ships inside the package (`presets/reasoning-support/`), and DSH wires it up on install. No preset files need to be placed by hand.
 
@@ -82,9 +82,9 @@ dsh plugin --profile web add dsh-reasoning-support
 
 **Restart DSH** so the new bundle takes effect, then select **Reasoning Support** with **DSV4.1** in a new session.
 
-To make it the default preset for new sessions, set `agent-presets.default: reasoning-support` in DSH's settings.
+To make it the default preset for new sessions, set `selectedDefault: reasoning-support` on the `agent-preset-registry` settings entry. Existing sessions keep their selected preset.
 
-The repository also ships `install.mjs`, which writes the preset and its runtime into `$DSH_HOME/.agent-presets/` — machine-wide rather than per-profile.
+The repository retains `install.mjs` for legacy directory-based installations. It explicitly refuses DSH 0.1.7: use the profile bundle, which declares `preset-reasoning-support` and loads `presets/reasoning-support/desktop.cordis.yml`. Desktop users install into the **desktop** profile. Merely having the dependency installed does not enable it; it must also appear in `dsh.profile.bundles`.
 
 ## Cost and limits
 
