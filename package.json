@@ -1,6 +1,6 @@
 {
   "name": "dsh-reasoning-support",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "DSV4.1 reasoning support with multimodal context and bounded artifact acceptance for DeepSeek Harness",
   "license": "MIT",
   "repository": {
@@ -12,8 +12,8 @@
     "node": ">=24"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent-preset": "^0.1.7-rc.2",
-    "@deepseek-ai/dsh-agent-preset-registry": "^0.1.7-rc.2"
+    "@deepseek-ai/dsh-agent-preset": ">=0.1.7-rc.2 <0.3.0",
+    "@deepseek-ai/dsh-agent-preset-registry": ">=0.1.7-rc.2 <0.3.0"
   },
   "files": [
     "runtime",

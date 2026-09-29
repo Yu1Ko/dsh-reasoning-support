@@ -72,7 +72,9 @@ input: [text, image]
 
 ## 安装与启用
 
-需要 Node.js **24 或更新版本**，以及已配置模型提供方的 DSH **0.1.7-rc.2**。插件 **0.3.0** 使用新版声明式预设与 V4 会话消息。旧版 DSH 0.1.5 请使用插件 0.2.2。
+需要 Node.js **24 或更新版本**，以及已配置模型提供方的 DSH **0.1.7-rc.2 至 0.2.0**。插件 **0.3.1** 使用新版声明式预设与 V4 会话消息；它把 `@deepseek-ai/dsh-agent-preset` 与 `@deepseek-ai/dsh-agent-preset-registry` 的 peer 声明为 `>=0.1.7-rc.2 <0.3.0`，因此 0.1.7 与 0.2.0 都能安装。旧版 DSH 0.1.5 请使用插件 0.2.2。
+
+DSH 0.2.0 会在启动时按插件声明的 DSH peer 范围校验每个组合包；范围不含当前版本的组合包会被跳过——只有一行 stderr 提示、插件页显示错误——并不会加载。
 
 本插件是一个 DSH profile bundle：预设随包提供（`presets/reasoning-support/`），安装后由 DSH 自动接入，不需要手动放置预设文件。
 

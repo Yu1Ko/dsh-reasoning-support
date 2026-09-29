@@ -72,7 +72,9 @@ The plugin checks the capability bound to the actual adapter call. A text placeh
 
 ## Installation and activation
 
-You need Node.js **24 or newer** and DSH **0.1.7-rc.2** with a configured model provider. Version **0.3.0** uses the new declarative preset API and V4 session messages. Use plugin version 0.2.2 for the older 0.1.5 harness.
+You need Node.js **24 or newer** and DSH **0.1.7-rc.2 through 0.2.0** with a configured model provider. Version **0.3.1** uses the new declarative preset API and V4 session messages; it declares `@deepseek-ai/dsh-agent-preset` and `@deepseek-ai/dsh-agent-preset-registry` as peers `>=0.1.7-rc.2 <0.3.0`, so it installs on both 0.1.7 and 0.2.0. Use plugin version 0.2.2 for the older 0.1.5 harness.
+
+DSH 0.2.0 validates every bundle's declared DSH peer range at startup; a bundle whose range excludes the running version is skipped — one line on stderr, an error in the plugins page — and is never loaded.
 
 This plugin is a DSH profile bundle: the preset ships inside the package (`presets/reasoning-support/`), and DSH wires it up on install. No preset files need to be placed by hand.
 
